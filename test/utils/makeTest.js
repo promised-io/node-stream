@@ -10,7 +10,7 @@ define([
   "promised-io/promise/delay",
   "promised-io/stream"
 ], function(testCase, assert, refute, fs, path, errors, delay, baseErrors){
-  return function(name, init){
+  return function(name, usesNativeStream, init){
     return testCase(name, {
       before: function(){
         this.expected = fs.readFileSync(__filename, "utf8");
@@ -138,7 +138,7 @@ define([
           });
         },
 
-        "unreadable streams": function(done){
+        "unreadable streams": !usesNativeStream ? testCase.Skip : function(done){
           var instance = this.instance;
 
           this._stream.resume();
@@ -167,13 +167,14 @@ define([
           }catch(e){}
         },
 
-        "is exhausting": function(){
+        // non-native streams may be repeatable, so skip this test
+        "is exhausting": !usesNativeStream ? testCase.Skip : function(){
           var instance = this.instance;
 
           instance.pipe(this.writeStream);
           assert.exception(function(){
             instance.consume(function(){});
-          }, errors.ExhaustionError);
+          }, baseErrors.ExhaustionError);
 
           this.writeStream.destroy();
         },
@@ -188,6 +189,13 @@ define([
             assert.same(written.length, expected.length);
             assert.same(written, expected);
           });
+        },
+
+        "fails if write stream is not writable": function(){
+          this.writeStream.destroy();
+          return this.instance.pipe(this.writeStream).fail(function(error){
+            assert(error instanceof errors.UnwritableStream);
+          });
         }
       },
 
@@ -195,7 +203,17 @@ define([
         "before consumption": function(){
           var expected = this.expected;
           var received = "";
-          this.instance.setEncoding("utf8");
+
+          var didSet = this.instance.setEncoding("utf8");
+          if(!didSet){
+            if(!usesNativeStream){
+              assert(true);
+              return null;
+            }else{
+              assert.fail("Expected setEncoding to return `true`");
+            }
+          }
+
           return this.instance.consume(function(value){
             assert.same(typeof value, "string");
             received += value;
@@ -219,8 +237,7 @@ define([
               assert(value instanceof Buffer);
             }
             if(index === 2){
-              isString = true;
-              instance.setEncoding("utf8");
+              isString = instance.setEncoding("utf8");
             }
             received.push(value);
           }).then(assert).then(function(){

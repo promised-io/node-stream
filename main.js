@@ -17,4 +17,11 @@ define([
   * Error value if consumption is started on an unreadable stream.
   **/
   exports.UnreadableStream = errorFactory("UnreadableStream", "The underlying Node stream is not readable.");
+
+  /**
+  * class node-stream.UnwritableStream
+  *
+  * Error value if we're trying to pipe to an unwritable stream.
+  **/
+  exports.UnwritableStream = errorFactory("UnwritableStream", "The underlying Node stream is not writable.");
 });

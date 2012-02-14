@@ -46,7 +46,11 @@ define([
     * Change the encoding of the produced values.
     **/
     setEncoding: function(encoding){
-      this._source && this._source.setEncoding(encoding);
+      if(this._source){
+        this._source.setEncoding(encoding);
+        return true;
+      }
+      return false;
     },
 
     consume: Exhaustive(function(callback){
@@ -73,7 +77,11 @@ define([
     * Returns a promise for when piping has finished.
     **/
     pipe: Exhaustive(function(stream){
-      var deferred = defer(function(){ stream.destroy(); });
+      if(!stream.writable){
+        return defer().rejectLater(new errors.UnwritableStream);
+      }
+
+      var deferred = defer();
       stream.on("end", deferred.resolve);
       stream.on("close", deferred.resolve);
       stream.on("error", deferred.reject);

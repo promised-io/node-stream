@@ -1,10 +1,10 @@
 if (typeof define !== 'function') { var define = (require('amdefine'))(module); }
 
 define([
-  "./utils/makeNativeTest",
+  "./utils/makeTest",
   "../Producer"
-], function(makeNativeTest, Producer){
-  return makeNativeTest("node-stream/Producer with native stream", function(readStream){
+], function(makeTest, Producer){
+  return makeTest("node-stream/Producer with native stream", true, function(readStream){
     return new Producer(readStream);
   });
 });
