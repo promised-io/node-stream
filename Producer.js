@@ -32,6 +32,7 @@ define([
     this._resume = lang.bind(this._resume, this);
 
     source.pause();
+    source.once("error", this._handleSourceError = lang.bind(this._handleSourceError, this));
   }, {
     _index: 0,
     _paused: false,
@@ -56,6 +57,10 @@ define([
     consume: Exhaustive(function(callback){
       if(!this._source.readable){
         return defer().rejectLater(new errors.UnreadableStream);
+      }
+
+      if(this._error){
+        return defer().rejectLater(this._error);
       }
 
       this._callback = callback;
@@ -124,6 +129,7 @@ define([
 
       this._source.removeListener("data", this._dataListener);
       this._source.removeListener("error", this._errorListener);
+      this._source.removeListener("error", this._handleSourceError);
       this._source.removeListener("end", this._endListener);
 
       if(ok !== true){
@@ -144,6 +150,10 @@ define([
       }
       this._source = this._buffer = this._callback = this._deferred = null;
       this._endListener = this._errorListener = this._dataListener = null;
+    },
+
+    _handleSourceError: function(error){
+      this._error = error;
     },
 
     _pause: function(backpressure){

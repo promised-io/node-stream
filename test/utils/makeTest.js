@@ -152,6 +152,14 @@ define([
               });
             });
           });
+        },
+
+        "failed streams": !usesNativeStream ? testCase.Skip : function(){
+          var expected = new Error;
+          this._stream.emit("error", expected);
+          return this.instance.consume(function(){}).fail(function(error){
+            assert.same(error, expected);
+          });
         }
       },
 
