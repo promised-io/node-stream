@@ -7,8 +7,7 @@ if (typeof define !== 'function') { var define = (require('amdefine'))(module); 
 **/
 define([
   "compose",
-  "promised-io/stream",
-  "./main",
+  "./_errors",
   "promised-io/stream/ExhaustiveDecorator",
   "promised-io/stream/Producer",
   "promised-io/promise/defer",
@@ -16,7 +15,7 @@ define([
   "promised-io/promise/isPromise",
   "promised-io/lib/adapters!lang",
   "promised-io/lib/adapters!timers"
-], function(Compose, baseErrors, errors, Exhaustive, Producer, defer, when, isPromise, lang, timers){
+], function(Compose, errors, Exhaustive, Producer, defer, when, isPromise, lang, timers){
   "use strict";
 
   /**
@@ -116,7 +115,7 @@ define([
           this._pause(backpressure);
         }
       }catch(error){
-        if(error instanceof baseErrors.StopConsumption){
+        if(error instanceof errors.StopConsumption){
           this._stop(null, false);
         }else{
           this._stop(error);
@@ -169,7 +168,7 @@ define([
 
       if(ok){
         timers.immediate(this._resume);
-      }else if(error instanceof baseErrors.StopConsumption){
+      }else if(error instanceof errors.StopConsumption){
         this._stop(null, false);
       }else{
         this._stop(error);

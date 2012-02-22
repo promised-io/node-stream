@@ -7,7 +7,7 @@ if (typeof define !== 'function') { var define = (require('amdefine'))(module); 
 **/
 define([
   "promised-io/stream/Stream",
-  "./main",
+  "./_errors",
   "./Producer",
   "stream",
   "promised-io/promise/defer",

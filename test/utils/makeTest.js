@@ -6,7 +6,7 @@ define([
   "promised-io/test/test-case/refute",
   "fs",
   "path",
-  "../../main",
+  "../../_errors",
   "promised-io/promise/delay",
   "promised-io/stream"
 ], function(testCase, assert, refute, fs, path, errors, delay, baseErrors){
