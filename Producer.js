@@ -155,6 +155,11 @@ define([
     },
 
     _stop: function(error, ok){
+      if(this._paused && ok === true){
+        this._bufferFinished();
+        return;
+      }
+
       this._stopped = true;
 
       this._removeSourceListeners();
