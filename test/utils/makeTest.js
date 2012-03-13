@@ -141,16 +141,12 @@ define([
         "unreadable streams": !usesNativeStream ? testCase.Skip : function(done){
           var instance = this.instance;
 
-          this._stream.resume();
-          this._stream.on("end", function(){
-            process.nextTick(function(){
-              var promise = instance.consume(function(){});
-              refute(promise.isFulfilled());
-              promise.fail(function(error){
-                assert(error instanceof errors.UnreadableStream);
-                done();
-              });
-            });
+          this._stream.destroy();
+          var promise = instance.consume(function(){});
+          refute(promise.isFulfilled());
+          promise.fail(function(error){
+            assert(error instanceof errors.UnreadableStream);
+            done();
           });
         },
 

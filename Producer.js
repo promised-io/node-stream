@@ -29,13 +29,21 @@ define([
     this._buffer = [];
     this._handleRelief = lang.bind(this._handleRelief, this);
     this._resume = lang.bind(this._resume, this);
+    this._resumePipe = lang.bind(this._resumePipe, this);
 
-    source.pause();
-    source.once("error", this._handleSourceError = lang.bind(this._handleSourceError, this));
+    this._pause();
+    source.on("data", this._dataListener = lang.bind(this._bufferPush, this));
+    source.on("error", this._errorListener = lang.bind(this._handleSourceError, this));
+    source.on("end", this._endListener = lang.bind(this._bufferFinished, this));
   }, {
     _index: 0,
     _paused: false,
     _stopped: false,
+    _fullyBuffered: false,
+
+    _source: null,
+    _target: null,
+    _buffer: null,
 
     isRepeatable: false,
 
@@ -54,10 +62,9 @@ define([
     },
 
     consume: Exhaustive(function(callback){
-      if(!this._source.readable){
+      if(!this._fullyBuffered && !this._source.readable){
         return defer().rejectLater(new errors.UnreadableStream);
       }
-
       if(this._error){
         return defer().rejectLater(this._error);
       }
@@ -65,11 +72,17 @@ define([
       this._callback = callback;
       this._deferred = defer(lang.bind(this._stop, this));
 
-      this._source.on("data", this._dataListener = lang.bind(this._notify, this));
-      this._source.on("error", this._errorListener = lang.bind(this._stop, this));
-      this._source.on("end", this._endListener = lang.bind(this._stop, this, null, true));
-      this._source.resume();
+      if(!this._fullyBuffered){
+        this._source.removeListener("data", this._dataListener);
+        this._source.removeListener("error", this._errorListener);
+        this._source.removeListener("end", this._endListener);
 
+        this._source.on("data", this._dataListener = lang.bind(this._notify, this));
+        this._source.on("error", this._errorListener = lang.bind(this._stop, this));
+        this._source.on("end", this._endListener = lang.bind(this._stop, this, null, true));
+      }
+
+      timers.immediate(this._resume);
       return this._deferred.promise;
     }),
 
@@ -85,6 +98,8 @@ define([
         return defer().rejectLater(new errors.UnwritableStream);
       }
 
+      this._target = stream;
+
       var deferred = defer();
       stream.on("end", deferred.resolve);
       stream.on("close", deferred.resolve);
@@ -94,18 +109,34 @@ define([
         stream.removeListener("end", deferred.resolve);
         stream.removeListener("close", deferred.resolve);
         stream.removeListener("error", deferred.reject);
-        this._source = deferred = stream = null;
+        this._source = this._deferred = deferred = this._target = stream = null;
       }, this));
 
-      this._source.pipe(stream);
-      this._source.resume();
+      this._removeSourceListeners();
+      timers.immediate(this._resumePipe);
 
       return deferred.promise;
     }),
 
+    _bufferPush: function(item){
+      this._buffer.push(item);
+    },
+
+    _bufferFinished: function(){
+      this._fullyBuffered = true;
+      this._removeSourceListeners();
+      this._source = null;
+    },
+
+    _removeSourceListeners: function(){
+      this._dataListener && this._source.removeListener("data", this._dataListener);
+      this._errorListener && this._source.removeListener("error", this._errorListener);
+      this._endListener && this._source.removeListener("end", this._endListener);
+    },
+
     _notify: function(item){
       if(this._paused){
-        this._buffer.push(item);
+        this._bufferPush(item);
         return;
       }
 
@@ -126,11 +157,7 @@ define([
     _stop: function(error, ok){
       this._stopped = true;
 
-      this._source.removeListener("data", this._dataListener);
-      this._source.removeListener("error", this._errorListener);
-      this._source.removeListener("error", this._handleSourceError);
-      this._source.removeListener("end", this._endListener);
-
+      this._removeSourceListeners();
       if(ok !== true){
         this._source.destroy();
       }
@@ -158,7 +185,9 @@ define([
     _pause: function(backpressure){
       this._paused = true;
       this._source.pause();
-      when(backpressure).change(true).inflect(this._handleRelief);
+      if(backpressure){
+        when(backpressure).change(true).inflect(this._handleRelief);
+      }
     },
 
     _handleRelief: function(error, ok){
@@ -182,12 +211,36 @@ define([
       while(!this._paused && !this._stopped && this._buffer && index < this._buffer.length){
         this._notify(this._buffer[index++]);
       }
-      this._buffer.splice(0, index);
+      this._buffer && this._buffer.splice(0, index);
 
       if(!this._paused){
-        if(this._stopped){
-          this._finish(null, true);
+        if(this._stopped || this._fullyBuffered){
+          if(this._deferred){
+            this._finish(null, true);
+          }
         }else{
+          this._source.resume();
+        }
+      }
+    },
+
+    _resumePipe: function(){
+      if(!this._target){
+        return;
+      }
+
+      for(var index = 0; this._target && index < this._buffer.length; index++){
+        if(!this._target.write(this._buffer[index])){
+          this._target.once("drain", this._resumePipe);
+          this._buffer.splice(0, index);
+        }
+      }
+
+      if(this._target){
+        if(this._fullyBuffered){
+          this._target.end();
+        }else{
+          this._source.pipe(this._target);
           this._source.resume();
         }
       }

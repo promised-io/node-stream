@@ -16,7 +16,7 @@ define([
     readable: true,
 
     on: Compose.after(function(type){
-      if(type === "data" && !this._destroyed){
+      if(type === "data" && !this._destroyed && !this._consumption){
         this._consumption = this._source.consume(this._produce.bind(this));
         this._consumption.change(true).inflect(function(error, ok){
           this.readable = false;
@@ -36,7 +36,8 @@ define([
     resume: function(){
       this._paused = this._pauseNext = false;
       if(this._bufferedItem){
-        var stayPaused = this._produce(item);
+        var stayPaused = this._produce(this._bufferedItem);
+        this._bufferedItem = null;
       }
       if(this._backpressure && !stayPaused){
         this._backpressure.resolve();
