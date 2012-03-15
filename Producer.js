@@ -118,6 +118,10 @@ define([
       return deferred.promise;
     }),
 
+    destroy: function(){
+      this._source.destroy();
+    },
+
     _bufferPush: function(item){
       this._buffer.push(item);
     },
