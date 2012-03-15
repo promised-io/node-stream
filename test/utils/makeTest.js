@@ -203,6 +203,13 @@ define([
         }
       },
 
+      "destroy": !usesNativeStream ? testCase.Skip : {
+        "makes stream unreadable": function(){
+          this.instance.destroy();
+          refute(this._stream.readable);
+        }
+      },
+
       "setEncoding": {
         "before consumption": function(){
           var expected = this.expected;
