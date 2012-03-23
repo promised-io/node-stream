@@ -32,9 +32,9 @@ define([
     this._resumePipe = lang.bind(this._resumePipe, this);
 
     this._pause();
-    source.on("data", this._dataListener = lang.bind(this._bufferPush, this));
-    source.on("error", this._errorListener = lang.bind(this._handleSourceError, this));
-    source.on("end", this._endListener = lang.bind(this._bufferFinished, this));
+    source.on("data", this._bufferDataListener = lang.bind(this._bufferPush, this));
+    source.on("error", this._bufferErrorListener = lang.bind(this._handleSourceError, this));
+    source.on("end", this._bufferEndListener = lang.bind(this._bufferFinished, this));
   }, {
     _index: 0,
     _paused: false,
@@ -73,13 +73,10 @@ define([
       this._deferred = defer(lang.bind(this._stop, this));
 
       if(!this._fullyBuffered){
-        this._source.removeListener("data", this._dataListener);
-        this._source.removeListener("error", this._errorListener);
-        this._source.removeListener("end", this._endListener);
-
         this._source.on("data", this._dataListener = lang.bind(this._notify, this));
         this._source.on("error", this._errorListener = lang.bind(this._stop, this));
         this._source.on("end", this._endListener = lang.bind(this._stop, this, null, true));
+        this._removeBufferListeners();
       }
 
       timers.immediate(this._resume);
@@ -112,7 +109,6 @@ define([
         this._source = this._deferred = deferred = this._target = stream = null;
       }, this));
 
-      this._removeSourceListeners();
       timers.immediate(this._resumePipe);
 
       return deferred.promise;
@@ -128,11 +124,18 @@ define([
 
     _bufferFinished: function(){
       this._fullyBuffered = true;
-      this._removeSourceListeners();
+      this._removeBufferListeners();
+      this._removeConsumptionListeners();
       this._source = null;
     },
 
-    _removeSourceListeners: function(){
+    _removeBufferListeners: function(){
+      this._bufferDataListener && this._source.removeListener("data", this._bufferDataListener);
+      this._bufferErrorListener && this._source.removeListener("error", this._bufferErrorListener);
+      this._bufferEndListener && this._source.removeListener("end", this._bufferEndListener);
+    },
+
+    _removeConsumptionListeners: function(){
       this._dataListener && this._source.removeListener("data", this._dataListener);
       this._errorListener && this._source.removeListener("error", this._errorListener);
       this._endListener && this._source.removeListener("end", this._endListener);
@@ -166,7 +169,7 @@ define([
 
       this._stopped = true;
 
-      this._removeSourceListeners();
+      this._removeConsumptionListeners();
       if(ok !== true){
         this._source.destroy();
       }
@@ -251,6 +254,7 @@ define([
         }else{
           this._source.pipe(this._target);
           this._source.resume();
+          this._removeBufferListeners();
         }
       }
     }
