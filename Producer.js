@@ -267,7 +267,8 @@ define([
       for(var index = 0; this._target && index < this._buffer.length; index++){
         if(!this._target.write(this._buffer[index])){
           this._target.once("drain", this._resumePipe);
-          this._buffer.splice(0, index);
+          this._buffer.splice(0, index + 1);
+          return;
         }
       }
 
