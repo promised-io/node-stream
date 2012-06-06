@@ -11,9 +11,8 @@ define([
   "./Producer",
   "stream",
   "promised-io/promise/defer",
-  "promised-io/stream/ExhaustiveDecorator",
-  "promised-io/lib/adapters!lang"
-], function(BaseStream, errors, Producer, NativeStream, defer, Exhaustive, lang){
+  "promised-io/stream/ExhaustiveDecorator"
+], function(BaseStream, errors, Producer, NativeStream, defer, Exhaustive){
   "use strict";
 
   return BaseStream.extend(function(source){
