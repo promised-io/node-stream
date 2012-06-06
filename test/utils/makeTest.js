@@ -207,6 +207,14 @@ define([
         "makes stream unreadable": function(){
           this.instance.destroy();
           refute(this._stream.readable);
+        },
+
+        "if stream is fully buffered": function(done){
+          this._stream.resume();
+          this._stream.on("end", function(){
+            refute.exception(this.instance.destroy.bind(this.instance));
+            done();
+          }.bind(this));
         }
       },
 

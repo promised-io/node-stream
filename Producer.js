@@ -115,7 +115,9 @@ define([
     }),
 
     destroy: function(){
-      this._source.destroy();
+      if(this._source){
+        this._source.destroy();
+      }
     },
 
     _bufferPush: function(item){
