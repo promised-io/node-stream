@@ -61,7 +61,7 @@ define([
       return false;
     },
 
-    consume: Exhaustive(function(callback){
+    consume: new Exhaustive(function(callback){
       if(!this._fullyBuffered && !this._source.readable){
         return defer().rejectLater(new errors.UnreadableStream);
       }
@@ -90,9 +90,9 @@ define([
     * Pipe from the underlying Node.js stream to the output stream.
     * Returns a promise for when piping has finished.
     **/
-    pipe: Exhaustive(function(stream){
+    pipe: new Exhaustive(function(stream){
       if(!stream.writable){
-        return defer().rejectLater(new errors.UnwritableStream);
+        return defer().rejectLater(new errors.UnwritableStream());
       }
 
       this._target = stream;
@@ -130,15 +130,27 @@ define([
     },
 
     _removeBufferListeners: function(){
-      this._bufferDataListener && this._source.removeListener("data", this._bufferDataListener);
-      this._bufferErrorListener && this._source.removeListener("error", this._bufferErrorListener);
-      this._bufferEndListener && this._source.removeListener("end", this._bufferEndListener);
+      if(this._bufferDataListener){
+        this._source.removeListener("data", this._bufferDataListener);
+      }
+      if(this._bufferErrorListener){
+        this._source.removeListener("error", this._bufferErrorListener);
+      }
+      if(this._bufferEndListener){
+        this._source.removeListener("end", this._bufferEndListener);
+      }
     },
 
     _removeConsumptionListeners: function(){
-      this._dataListener && this._source.removeListener("data", this._dataListener);
-      this._errorListener && this._source.removeListener("error", this._errorListener);
-      this._endListener && this._source.removeListener("end", this._endListener);
+      if(this._dataListener){
+        this._source.removeListener("data", this._dataListener);
+      }
+      if(this._errorListener){
+        this._source.removeListener("error", this._errorListener);
+      }
+      if(this._endListener){
+        this._source.removeListener("end", this._endListener);
+      }
     },
 
     _notify: function(item){
@@ -223,7 +235,9 @@ define([
       while(!this._paused && !this._stopped && this._buffer && index < this._buffer.length){
         this._notify(this._buffer[index++]);
       }
-      this._buffer && this._buffer.splice(0, index);
+      if(this._buffer){
+        this._buffer.splice(0, index);
+      }
 
       if(!this._paused){
         if(this._stopped || this._fullyBuffered){

@@ -46,14 +46,14 @@ define([
     * Throws [[node-stream.UnwritableStream]] if the stream could not be
     * written to.
     **/
-    pipe: Exhaustive(function(stream){
+    pipe: new Exhaustive(function(stream){
       if(typeof this._producer.pipe === "function"){
         return this._producer.pipe(stream);
       }
 
       return this.consume(function(value){
         if(!stream.writable){
-          throw new errors.UnwritableStream;
+          throw new errors.UnwritableStream();
         }
 
         var flushed = stream.write(value);
