@@ -203,6 +203,13 @@ define([
           });
         },
 
+        "fails if source stream is not readable": !usesNativeStream ? testCase.Skip : function(){
+          this._stream.destroy();
+          return this.instance.pipe(this.writeStream).fail(function(error){
+            assert(error instanceof errors.UnreadableStream);
+          });
+        },
+
         "fails if target stream is not writable": function(){
           this.writeStream.destroy();
           return this.instance.pipe(this.writeStream).fail(function(error){

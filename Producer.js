@@ -95,7 +95,9 @@ define([
     **/
     pipe: new Exhaustive(function(stream){
       var error = this._error;
-      if(!stream.writable){
+      if(!this._fullyBuffered && !this._source.readable){
+        error = new errors.UnreadableStream();
+      }else if(!stream.writable){
         error = new errors.UnwritableStream();
       }
 
