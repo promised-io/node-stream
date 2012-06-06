@@ -62,11 +62,14 @@ define([
     },
 
     consume: new Exhaustive(function(callback){
+      var error = this._error;
       if(!this._fullyBuffered && !this._source.readable){
-        return defer().rejectLater(new errors.UnreadableStream());
+        error = new errors.UnreadableStream();
       }
-      if(this._error){
-        return defer().rejectLater(this._error);
+
+      if(error){
+        this._removeBufferListeners();
+        return defer().rejectLater(error);
       }
 
       this._callback = callback;
@@ -91,8 +94,13 @@ define([
     * Returns a promise for when piping has finished.
     **/
     pipe: new Exhaustive(function(stream){
+      var error = this._error;
       if(!stream.writable){
-        return defer().rejectLater(new errors.UnwritableStream());
+        error = new errors.UnwritableStream();
+      }
+
+      if(error){
+        return defer().rejectLater(error);
       }
 
       this._target = stream;
@@ -101,11 +109,13 @@ define([
       stream.on("end", deferred.resolve);
       stream.on("close", deferred.resolve);
       stream.on("error", deferred.reject);
+      this._source.on("error", deferred.reject);
 
       deferred.promise.both(lang.bind(function(){
         stream.removeListener("end", deferred.resolve);
         stream.removeListener("close", deferred.resolve);
         stream.removeListener("error", deferred.reject);
+        this._source.removeListener("error", deferred.reject);
         this._source = this._deferred = deferred = this._target = stream = null;
       }, this));
 
@@ -126,8 +136,6 @@ define([
 
     _bufferFinished: function(){
       this._fullyBuffered = true;
-      this._removeBufferListeners();
-      this._removeConsumptionListeners();
       this._source = null;
     },
 
@@ -267,9 +275,10 @@ define([
         }else{
           this._source.pipe(this._target);
           this._source.resume();
-          this._removeBufferListeners();
         }
       }
+
+      this._removeBufferListeners();
     }
   });
 });

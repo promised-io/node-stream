@@ -195,7 +195,15 @@ define([
           });
         },
 
-        "fails if write stream is not writable": function(){
+        "pipes errors": !usesNativeStream ? testCase.Skip : function(){
+          var expected = new Error();
+          this._stream.emit("error", expected);
+          return this.instance.pipe(this.writeStream).fail(function(error){
+            assert.same(expected, error);
+          });
+        },
+
+        "fails if target stream is not writable": function(){
           this.writeStream.destroy();
           return this.instance.pipe(this.writeStream).fail(function(error){
             assert(error instanceof errors.UnwritableStream);
