@@ -3,8 +3,9 @@ if (typeof define !== 'function') { var define = (require('amdefine'))(module); 
 define([
   "compose",
   "events",
-  "promised-io/promise/defer"
-], function(Compose, events, defer){
+  "promised-io/promise/defer",
+  "promised-io/lib/adapters!timers"
+], function(Compose, events, defer, timers){
   return Compose(events.EventEmitter, function(source){
     this._source = source;
   }, {
@@ -21,9 +22,9 @@ define([
         this._consumption.change(true).inflect(function(error, ok){
           this.readable = false;
           if(ok){
-            this.emit("end");
+            timers.immediate(this.emit.bind(this, "end"));
           }else{
-            this.emit("error", error);
+            timers.immediate(this.emit.bind(this, "error", error));
           }
         }.bind(this));
       }
