@@ -182,9 +182,6 @@ define([
       this._stopped = true;
 
       this._removeConsumptionListeners();
-      if(ok !== true){
-        this._source.destroy();
-      }
       this._source = null;
 
       if(!this._buffer.length){
