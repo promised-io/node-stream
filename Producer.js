@@ -63,7 +63,7 @@ define([
 
     consume: new Exhaustive(function(callback){
       if(!this._fullyBuffered && !this._source.readable){
-        return defer().rejectLater(new errors.UnreadableStream);
+        return defer().rejectLater(new errors.UnreadableStream());
       }
       if(this._error){
         return defer().rejectLater(this._error);
