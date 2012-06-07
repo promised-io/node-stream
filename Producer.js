@@ -102,6 +102,7 @@ define([
       }
 
       if(error){
+        this._removeBufferListeners();
         return defer().rejectLater(error);
       }
 
@@ -138,7 +139,6 @@ define([
 
     _bufferFinished: function(){
       this._fullyBuffered = true;
-      this._source = null;
     },
 
     _removeBufferListeners: function(){
@@ -150,6 +150,9 @@ define([
       }
       if(this._bufferEndListener){
         this._source.removeListener("end", this._bufferEndListener);
+      }
+      if(this._fullyBuffered){
+        this._source = null;
       }
     },
 
