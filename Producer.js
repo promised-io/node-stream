@@ -16,8 +16,29 @@ define([
   "promised-io/lib/adapters!lang",
   "promised-io/lib/adapters!timers",
   "stream"
-], function(Compose, errors, Exhaustive, Producer, defer, when, isPromise, lang, timers, NativeStream){
+], function(compose, errors, Exhaustive, Producer, defer, when, isPromise, lang, timers, NativeStream){
   "use strict";
+
+  var GlueStream = compose(NativeStream, {
+    readable: true,
+    writable: true,
+    paused: false,
+
+    write: function(chunk){
+      this.emit("data", chunk);
+      return !this.paused;
+    },
+    end: function(){
+      this.emit("end");
+    },
+    pause: function(){
+      this.paused = true;
+    },
+    resume: function(){
+      this.paused = false;
+      this.emit("drain");
+    }
+  });
 
   /**
   * new node-stream.Producer(source)
@@ -270,14 +291,7 @@ define([
       }
 
       if(!this._glue){
-        this._glue = new NativeStream();
-        this._glue.writable = true;
-        this._glue.write = function(chunk){
-          this.emit("data", chunk);
-        };
-        this._glue.end = function(){
-          this.emit("end");
-        };
+        this._glue = new GlueStream();
         this._glue.pipe(this._target);
       }
 
