@@ -14,8 +14,9 @@ define([
   "promised-io/promise/when",
   "promised-io/promise/isPromise",
   "promised-io/lib/adapters!lang",
-  "promised-io/lib/adapters!timers"
-], function(Compose, errors, Exhaustive, Producer, defer, when, isPromise, lang, timers){
+  "promised-io/lib/adapters!timers",
+  "stream"
+], function(Compose, errors, Exhaustive, Producer, defer, when, isPromise, lang, timers, NativeStream){
   "use strict";
 
   /**
@@ -43,6 +44,7 @@ define([
 
     _source: null,
     _target: null,
+    _glue: null,
     _buffer: null,
 
     isRepeatable: false,
@@ -119,10 +121,10 @@ define([
         stream.removeListener("close", deferred.resolve);
         stream.removeListener("error", deferred.reject);
         this._source.removeListener("error", deferred.reject);
-        this._source = this._deferred = deferred = this._target = stream = null;
+        this._source = this._deferred = deferred = this._target = this._glue = stream = null;
       }, this));
 
-      timers.immediate(this._resumePipe);
+      this._resumePipe();
 
       return deferred.promise;
     }),
@@ -267,6 +269,18 @@ define([
         return;
       }
 
+      if(!this._glue){
+        this._glue = new NativeStream();
+        this._glue.writable = true;
+        this._glue.write = function(chunk){
+          this.emit("data", chunk);
+        };
+        this._glue.end = function(){
+          this.emit("end");
+        };
+        this._glue.pipe(this._target);
+      }
+
       for(var index = 0; this._target && index < this._buffer.length; index++){
         if(!this._target.write(this._buffer[index])){
           this._target.once("drain", this._resumePipe);
@@ -275,11 +289,11 @@ define([
         }
       }
 
-      if(this._target){
+      if(this._glue){
         if(this._fullyBuffered){
-          this._target.end();
+          this._glue.end();
         }else{
-          this._source.pipe(this._target);
+          this._source.pipe(this._glue);
           this._source.resume();
         }
       }
